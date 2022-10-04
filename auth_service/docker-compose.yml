@@ -1,0 +1,42 @@
+version: '3'
+
+services:
+  db:
+    image: postgres:11.5
+    restart: always
+    ports:
+      - "6666:5432"
+    volumes:
+      - ./pg_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_PASSWORD: 1q2w3e
+      POSTGRES_DB: atesauth
+
+  db_ram:
+    image: postgres:11.5
+    tmpfs:
+      - /var/lib/postgresql/data
+
+  app:
+    container_name: ates_auth
+    image: ates_auth
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      dockerize -wait tcp://db:5432 -timeout 50s
+      gunicorn -b :80
+      --capture-output
+      --error-logfile -
+      --access-logfile -
+      --workers 1
+      --threads 5
+      --reload
+      wsgi:application
+    ports:
+      - "80:80"
+    depends_on:
+      - db
+    volumes:
+      - ./auth:/app
+
